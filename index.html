@@ -191,6 +191,9 @@ nav {
 .services-dot.active { background: var(--gold); width: 28px; border-radius: 5px; }
 
 /* WHY US */
+.why-bg { background: var(--forest); }
+.why-bg .section-label { color: var(--gold-light); }
+.why-bg .section-title { color: var(--white); }
 .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 .why-card { text-align: center; padding: 2rem 1.3rem; border-radius: 14px; background: var(--white); border: 2px solid var(--gold); transition: all 0.3s; }
 .why-card:hover { transform: translateY(-3px); box-shadow: 0 10px 36px rgba(0,0,0,0.06); }
@@ -430,7 +433,8 @@ nav {
 </section>
 
 <!-- WHY US -->
-<section class="section">
+<section class="why-bg">
+  <div class="section">
   <div class="section-header fade-in">
     <div class="section-label">Why Choose Us</div>
     <h2 class="section-title">The Dartmouth Difference</h2>
@@ -451,6 +455,7 @@ nav {
       <h3>Fair &amp; Honest Pricing</h3>
       <p>No hidden fees, no surprises. Upfront pricing on every job, big or small.</p>
     </div>
+  </div>
   </div>
 </section>
 
