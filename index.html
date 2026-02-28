@@ -574,8 +574,12 @@ const observer = new IntersectionObserver((entries) => {
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 </script>
 
-<!-- GAINWRK CHAT WIDGET -->
-<script src="https://gainwrk-widget.pages.dev/widget.js" data-client="dartmouth-hw"></script>
+<!-- GainWrk Chat Widget -->
+<script src="https://gainwrk-widget.pages.dev/widget.js"
+        data-client="dartmouth-honeywagon"
+        data-server="https://saas-bot-prototype.onrender.com"
+        defer>
+</script>
 
 </body>
 </html>
