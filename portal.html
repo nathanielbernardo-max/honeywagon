@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MARKETWRK | Client Portal</title>
+  <link rel="icon" type="image/png" href="MarketwrkFavicon.png">
+  <meta name="robots" content="noindex, nofollow">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --green: #00C805;
+      --green-dim: rgba(0, 200, 5, .15);
+      --green-glow: rgba(0, 200, 5, .25);
+      --purple: #7C3AED;
+      --purple-dim: rgba(124, 58, 237, .12);
+      --purple-dark: #0c0a1a;
+      --purple-card: #13102a;
+      --purple-border: rgba(124, 58, 237, .18);
+      --surface: #0f0d1e;
+      --surface-2: #181530;
+      --surface-3: #1e1a38;
+      --text: #e8e4f5;
+      --text-dim: #8b83a8;
+      --text-muted: #5a5278;
+      --red: #ef4444;
+      --red-dim: rgba(239, 68, 68, .12);
+      --blue: #60a5fa;
+      --blue-dim: rgba(96, 165, 250, .12);
+      --amber: #fbbf24;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans); background: var(--purple-dark);
+      color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--purple-border); border-radius: 3px; }
+
+    #login-screen {
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+      background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(0,200,5,.04) 0%, transparent 50%), var(--purple-dark);
+    }
+    .login-box {
+      width: min(440px, calc(100% - 40px)); background: var(--surface);
+      border: 1px solid var(--purple-border); border-radius: 20px;
+      padding: 48px 40px; position: relative; overflow: hidden;
+    }
+    .login-box::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--purple), var(--green));
+    }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo .brand { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+    .login-logo .brand .m { color: var(--purple); }
+    .login-logo .brand .w { color: var(--green); }
+    .login-logo .subtitle { font-size: 13px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; letter-spacing: .03em; }
+    .form-input {
+      width: 100%; padding: 14px 16px; background: var(--purple-card);
+      border: 1px solid var(--purple-border); border-radius: 10px; color: var(--text);
+      font-size: 15px; font-family: var(--sans); outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .form-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+    .form-input::placeholder { color: var(--text-muted); }
+    .btn-primary {
+      width: 100%; padding: 14px; background: var(--green); color: #071307;
+      font-size: 15px; font-weight: 700; font-family: var(--sans); border: none;
+      border-radius: 10px; cursor: pointer; transition: transform .15s, box-shadow .15s; margin-top: 8px;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,200,5,.2); }
+    .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .login-error {
+      background: var(--red-dim); border: 1px solid rgba(239,68,68,.25); color: var(--red);
+      padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none;
+    }
+    .login-footer { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+
+    .login-links { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
+    .login-link { color: var(--green); cursor: pointer; font-weight: 500; transition: opacity .15s; background: none; border: none; font-family: var(--sans); font-size: 13px; padding: 0; }
+    .login-link:hover { opacity: .8; text-decoration: underline; }
+    .login-success { background: var(--green-dim); border: 1px solid rgba(0,200,5,.25); color: var(--green); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none; }
+    .login-view { display: none; }
+    .login-view.active { display: block; }
+    .back-link { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 13px; cursor: pointer; background: none; border: none; font-family: var(--sans); padding: 0; margin-bottom: 20px; transition: color .15s; }
+    .back-link:hover { color: var(--text); }
+
+    #dashboard { display: none; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--purple-border); position: sticky; top: 0; z-index: 50; }
+    .topbar-inner { max-width: 1320px; margin: 0 auto; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar-brand { display: flex; align-items: center; gap: 12px; }
+    .topbar-brand .icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      display: block; object-fit: cover;
+    }
+    .topbar-brand .name { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+    .topbar-brand .name .m { color: var(--purple); }
+    .topbar-brand .name .w { color: var(--green); }
+    .topbar-brand .tag { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .topbar-client { font-size: 13px; color: var(--text-dim); font-weight: 500; }
+    .btn-logout {
+      padding: 8px 16px; background: transparent; border: 1px solid var(--purple-border);
+      color: var(--text-dim); font-size: 12px; font-weight: 600; font-family: var(--sans);
+      border-radius: var(--radius-sm); cursor: pointer; transition: all .15s;
+    }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+    .green-bar { height: 3px; background: linear-gradient(90deg, var(--purple), var(--green)); }
+
+    .tab-bar { background: var(--surface); border-bottom: 1px solid var(--purple-border); }
+    .tab-bar-inner { max-width: 1320px; margin: 0 auto; padding: 0 28px; display: flex; gap: 4px; }
+    .tab-btn { padding: 12px 20px; font-size: 13px; font-weight: 600; font-family: var(--sans); color: var(--text-muted); background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s; }
+    .tab-btn:hover { color: var(--text-dim); }
+    .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .main { max-width: 1320px; margin: 0 auto; padding: 24px 28px 48px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--purple-border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+    .stat-card.clickable { cursor: pointer; transition: border-color .2s, background .2s; }
+    .stat-card.clickable:hover { border-color: rgba(239,68,68,.4); background: var(--red-dim); }
+    .stat-card.clickable.active-filter { border-color: rgba(239,68,68,.5); background: var(--red-dim); }
+    .stat-card.clickable.active-green { border-color: rgba(0,200,5,.5); background: var(--green-dim); }
+    .stat-card::after { content: attr(data-icon); position: absolute; top: -6px; right: -4px; font-size: 52px; opacity: .04; transform: rotate(-10deg); }
+
+    .active-filters-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+    .active-filters-bar:empty { display: none; }
+    .filter-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--sans); background: var(--purple-dim); border: 1px solid var(--purple-border); color: var(--text); }
+    .filter-tag .remove { cursor: pointer; font-size: 14px; color: var(--text-muted); transition: color .15s; line-height: 1; }
+    .filter-tag .remove:hover { color: var(--red); }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 500; margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 700; font-family: var(--mono); letter-spacing: -1px; }
+    .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .search-wrap { flex: 1; min-width: 220px; position: relative; }
+    .search-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); }
+    .search-input { width: 100%; padding: 10px 14px 10px 38px; background: var(--surface); border: 1px solid var(--purple-border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: var(--sans); outline: none; transition: border-color .2s; }
+    .search-input:focus { border-color: var(--green); }
+    .filter-btn { padding: 10px 16px; border-radius: var(--radius-sm); border: 1px solid var(--purple-border); background: var(--surface); color: var(--text-dim); font-size: 12px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: all .15s; }
+    .filter-btn.active { border-color: rgba(0,200,5,.4); background: var(--green-dim); color: var(--green); }
+    .filter-btn:hover:not(.active) { border-color: var(--text-muted); }
+    .export-btn { padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid var(--purple-border); background: var(--surface); color: var(--text-dim); font-size: 12px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+    .export-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+    .table-wrap { background: var(--surface); border: 1px solid var(--purple-border); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 280px); }
+    .table-header { display: grid; grid-template-columns: 2fr 0.8fr 0.8fr 1fr 0.8fr 0.5fr 0.8fr 0.8fr 40px; padding: 12px 20px; background: var(--surface-2); border-bottom: 1px solid var(--purple-border); min-width: 960px; position: sticky; top: 0; z-index: 4; }
+    .table-header span { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; }
+    .table-header span:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface-2); padding-right: 12px; }
+    .table-header .sortable { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 4px; transition: color .15s; }
+    .table-header .sortable:hover { color: var(--text); }
+    .table-header .sortable.active { color: var(--green); }
+    .sort-arrow { font-size: 9px; opacity: 0.4; transition: opacity .15s; }
+    .sortable.active .sort-arrow { opacity: 1; }
+
+    .table-row { display: grid; grid-template-columns: 2fr 0.8fr 0.8fr 1fr 0.8fr 0.5fr 0.8fr 0.8fr 40px; padding: 14px 20px; align-items: center; border-bottom: 1px solid rgba(124,58,237,.08); cursor: pointer; transition: background .12s; min-width: 960px; }
+    .table-row > div { min-width: 0; }
+    .table-row > div:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); padding-right: 12px; }
+    .table-row:hover > div:first-child { background: #131025; }
+    .table-row.expanded > div:first-child { background: #0e1210; }
+    .table-row:hover { background: rgba(124,58,237,.04); }
+    .table-row.expanded { background: rgba(0,200,5,.03); }
+    .prod-name { font-weight: 500; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+    .prod-name.name-expanded { -webkit-line-clamp: unset; overflow: visible; }
+    .prod-cat { font-size: 11px; color: var(--text-muted); }
+    .retailer-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 600; font-family: var(--mono); letter-spacing: .5px; text-transform: uppercase; }
+    .badge-home_depot { background: rgba(246,140,30,.12); color: #f68c1e; border: 1px solid rgba(246,140,30,.25); }
+    .badge-lowes { background: rgba(0,68,153,.12); color: #60a5fa; border: 1px solid rgba(0,68,153,.25); }
+    .badge-walmart { background: rgba(0,113,206,.12); color: #38bdf8; border: 1px solid rgba(0,113,206,.25); }
+    .badge-costco { background: rgba(224,30,54,.12); color: #fb7185; border: 1px solid rgba(224,30,54,.25); }
+    .badge-sams_club { background: rgba(0,100,60,.12); color: #4ade80; border: 1px solid rgba(0,100,60,.25); }
+    .badge-bjs { background: rgba(180,50,50,.12); color: #fca5a5; border: 1px solid rgba(180,50,50,.25); }
+    .price-cell { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+    .map-violation-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 6px; vertical-align: middle; color: var(--red); animation: bellPulse 2s ease-in-out infinite; }
+    .map-violation-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    @keyframes bellPulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    .price-up { color: var(--red); }
+    .price-down { color: var(--green); }
+    .expand-arrow { text-align: right; font-size: 16px; color: var(--text-muted); transition: transform .2s, color .2s; }
+    .table-row.expanded .expand-arrow { transform: rotate(180deg); color: var(--green); }
+    .chart-row { padding: 20px; background: rgba(0,0,0,.15); border-bottom: 1px solid var(--purple-border); display: none; min-width: 960px; }
+    .chart-row.open { display: block; }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .chart-title { font-size: 13px; font-weight: 600; color: var(--text-dim); }
+    .chart-canvas-wrap { height: 220px; position: relative; }
+
+    .viol-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 100px; padding: 12px 20px; align-items: center; border-bottom: 1px solid rgba(124,58,237,.08); font-size: 13px; }
+    .viol-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 100px; padding: 12px 20px; background: var(--surface-2); border-bottom: 1px solid var(--purple-border); }
+    .viol-header span { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 600; font-family: var(--mono); text-transform: uppercase; }
+    .status-open { background: var(--red-dim); color: var(--red); }
+    .status-acknowledged { background: rgba(251,191,36,.12); color: var(--amber); }
+    .status-resolved { background: var(--green-dim); color: var(--green); }
+
+    .run-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 100px; padding: 12px 20px; align-items: center; border-bottom: 1px solid rgba(124,58,237,.08); font-size: 13px; }
+    .run-header { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 100px; padding: 12px 20px; background: var(--surface-2); border-bottom: 1px solid var(--purple-border); }
+    .run-header span { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; }
+    .status-running { background: var(--blue-dim); color: var(--blue); }
+    .status-completed { background: var(--green-dim); color: var(--green); }
+    .status-failed { background: var(--red-dim); color: var(--red); }
+    .empty-state { text-align: center; padding: 64px 20px; color: var(--text-muted); }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+    .empty-state p { font-size: 14px; }
+    .loading-spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--purple-border); border-top-color: var(--green); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-overlay { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 48px; color: var(--text-dim); font-size: 14px; }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .table-header, .table-row { min-width: 960px; }
+      .viol-header, .viol-row { grid-template-columns: 1.5fr 1fr 1fr 80px; }
+      .viol-header span:nth-child(4), .viol-header span:nth-child(5), .viol-row > *:nth-child(4), .viol-row > *:nth-child(5) { display: none; }
+    }
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .topbar-inner { padding: 12px 16px; }
+      .main { padding: 16px; }
+      .login-box { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <a href="https://marketwrk.com" style="text-decoration:none;"><div class="brand"><span class="m">MARKET</span><span class="w">WRK</span></div></a>
+      <div class="subtitle">Client Portal</div>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <div id="view-login" class="login-view active">
+      <div id="login-error" class="login-error"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" class="form-input" placeholder="you@company.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" class="form-input" autocomplete="current-password" />
+      </div>
+      <button id="login-btn" class="btn-primary" onclick="handleLogin()">Sign In</button>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text-dim);cursor:pointer;"><input type="checkbox" id="login-remember" style="accent-color:var(--purple);width:16px;height:16px;cursor:pointer;" /> Keep me signed in for 30 days</label>
+      <div class="login-links">
+        <button class="login-link" onclick="showView('forgot')">Forgot Password?</button>
+        <span style="color:var(--text-muted);">Need access? <a href="mailto:info&#64;marketwrk.com">Contact us</a></span>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="https://marketwrk.com" style="color:var(--purple);font-size:13px;text-decoration:none;">&larr; Back to Home</a>
+      </div>
+    </div>
+
+    <!-- FORGOT PASSWORD VIEW -->
+    <div id="view-forgot" class="login-view">
+      <button class="back-link" onclick="showView('login')">&#8592; Back to Sign In</button>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;">Reset your password</div>
+        <div style="font-size:13px;color:var(--text-dim);">Enter your email and we'll send you a reset link.</div>
+      </div>
+      <div id="forgot-error" class="login-error"></div>
+      <div id="forgot-success" class="login-success"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="forgot-email" class="form-input" placeholder="you@company.com" autocomplete="email" />
+      </div>
+      <button id="forgot-btn" class="btn-primary" onclick="handleForgotPassword()">Send Reset Link</button>
+    </div>
+
+    <!-- VERIFY RECOVERY VIEW -->
+    <div id="view-verify-recovery" class="login-view">
+      <div style="margin-bottom:20px;">
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;">Reset your password</div>
+        <div style="font-size:13px;color:var(--text-dim);">Click the button below to verify your identity and set a new password.</div>
+      </div>
+      <div id="verify-recovery-error" class="login-error"></div>
+      <button id="verify-recovery-btn" class="btn-primary" onclick="handleVerifyRecovery()">Continue to Reset Password</button>
+    </div>
+
+    <!-- RESET PASSWORD VIEW -->
+    <div id="view-reset" class="login-view">
+      <div style="margin-bottom:20px;">
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;">Set a new password</div>
+        <div style="font-size:13px;color:var(--text-dim);">Enter your new password below.</div>
+      </div>
+      <div id="reset-error" class="login-error"></div>
+      <div id="reset-success" class="login-success"></div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="reset-password" class="form-input" placeholder="New password (min 6 characters)" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="reset-confirm" class="form-input" placeholder="Confirm new password" autocomplete="new-password" />
+      </div>
+      <button id="reset-btn" class="btn-primary" onclick="handleResetPassword()">Update Password</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="dashboard">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="https://marketwrk.com" class="topbar-brand" style="text-decoration:none;">
+        <img class="icon" src="MarketwrkFavicon.png" alt="MARKETWRK" />
+        <div>
+          <div class="name"><span class="m">MARKET</span><span class="w">WRK</span></div>
+          <div class="tag">Price Intelligence</div>
+        </div>
+      </a>
+      <div class="topbar-right">
+        <span id="client-name" class="topbar-client"></span>
+        <button class="btn-logout" onclick="handleLogout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+  <div class="green-bar"></div>
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" data-tab="prices" onclick="switchTab('prices')">Prices</button>
+      <button class="tab-btn" data-tab="violations" onclick="switchTab('violations')">MAP Violations</button>
+      <button class="tab-btn" data-tab="runs" onclick="switchTab('runs')">Run History</button>
+    </div>
+  </nav>
+  <div class="main">
+    <div id="tab-prices" class="tab-panel active">
+      <div class="stats-grid">
+        <div class="stat-card clickable" id="stat-products-card" data-icon="&#128230;" onclick="clearAllFilters()"><div class="stat-label">Products Tracked</div><div class="stat-value" id="stat-products">&mdash;</div></div>
+        <div class="stat-card" data-icon="&#127978;"><div class="stat-label">Retailers</div><div class="stat-value" id="stat-retailers">&mdash;</div></div>
+        <div class="stat-card" data-icon="&#128205;"><div class="stat-label">Zip Codes</div><div class="stat-value" id="stat-zips">&mdash;</div></div>
+        <div class="stat-card clickable" id="stat-violations-card" data-icon="&#9888;&#65039;" onclick="toggleViolationFilter()"><div class="stat-label">MAP Violations</div><div class="stat-value" id="stat-violations">&mdash;</div><div class="stat-sub">open</div></div>
+      </div>
+      <div id="active-filters-bar" class="active-filters-bar"></div>
+      <div class="filters">
+        <div class="search-wrap">
+          <span class="icon">&#8981;</span>
+          <input type="text" id="search-input" class="search-input" placeholder="Search products..." oninput="filterProducts()" />
+        </div>
+        <div id="retailer-filters"></div>
+        <button class="export-btn" onclick="exportToExcel()">&#10515; Export</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="sortable active" onclick="setSort('product')" id="sort-product">Product <span class="sort-arrow">&#9650;</span></span>
+          <span class="sortable" onclick="setSort('retailer')" id="sort-retailer">Retailer <span class="sort-arrow">&#9650;</span></span>
+          <span class="sortable" onclick="setSort('brand')" id="sort-brand">Brand <span class="sort-arrow">&#9650;</span></span>
+          <span>UPC</span>
+          <span>Model #</span>
+          <span class="sortable" onclick="setSort('rating')" id="sort-rating">Rating <span class="sort-arrow">&#9650;</span></span>
+          <span class="sortable" onclick="setSort('price')" id="sort-price">Latest Price <span class="sort-arrow">&#9660;</span></span>
+          <span class="sortable" onclick="setSort('map')" id="sort-map">MAP Price <span class="sort-arrow">&#9660;</span></span>
+          <span></span>
+        </div>
+        <div id="products-body">
+          <div class="loading-overlay"><div class="loading-spinner"></div> Loading products&hellip;</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-violations" class="tab-panel">
+      <div class="table-wrap">
+        <div class="viol-header"><span>Product</span><span>Zip</span><span>MAP Price</span><span>Actual Price</span><span>Violation</span><span>Status</span></div>
+        <div id="violations-body"><div class="loading-overlay"><div class="loading-spinner"></div> Loading violations&hellip;</div></div>
+      </div>
+    </div>
+
+    <div id="tab-runs" class="tab-panel">
+      <div class="table-wrap">
+        <div class="run-header"><span>Run ID</span><span>Retailer</span><span>Total Checks</span><span>Success</span><span>Errors</span><span>Status</span></div>
+        <div id="runs-body"><div class="loading-overlay"><div class="loading-spinner"></div> Loading runs&hellip;</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://gydbfomutyxifaujywer.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZGJmb211dHl4aWZhdWp5d2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNDk3NDIsImV4cCI6MjA4NzcyNTc0Mn0.ayq_FFkEvz59V5On-gOFtQmPoySHTxZTO_x51X72uGY';
+var __isRecoveryRedirect = window.location.hash && window.location.hash.includes('type=recovery');
+var __recoveryTokenHash = new URLSearchParams(window.location.search).get('token_hash');
+var __recoveryType = new URLSearchParams(window.location.search).get('type');
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+var currentClient = null;
+var dataClientId = null;
+var allProducts = [];
+var allLatestPrices = {};
+var activeRetailerFilter = 'all';
+var violationFilterActive = false;
+var violationProductIds = new Set();
+var currentSort = { field: 'product', dir: 'asc' };
+var charts = {};
+
+function esc(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatRetailer(r) {
+  var m = { home_depot:"Home Depot", lowes:"Lowe's", walmart:"Walmart", costco:"Costco", sams_club:"Sam's Club", bjs:"BJ's" };
+  return m[r] || r;
+}
+
+function getProductDisplayName(p) {
+  if (p.product_name && p.product_name.trim()) return p.product_name;
+  var pr = allLatestPrices[p.id] || [];
+  if (pr.length > 0 && pr[0].product_title) return pr[0].product_title;
+  return 'SKU: ' + p.product_id;
+}
+
+function getLatestPriceNum(p) {
+  var pr = allLatestPrices[p.id] || [];
+  return (pr.length > 0 && pr[0].price) ? Number(pr[0].price) : null;
+}
+
+async function handleLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var password = document.getElementById('login-password').value;
+  var btn = document.getElementById('login-btn');
+  var errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in\u2026';
+  var result = await sb.auth.signInWithPassword({ email: email, password: password });
+  if (result.error) { errEl.textContent = result.error.message; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Sign In'; return; }
+  if (document.getElementById('login-remember').checked) { localStorage.setItem('mw_remember', String(Date.now() + 30 * 24 * 60 * 60 * 1000)); } else { localStorage.removeItem('mw_remember'); }
+  sessionStorage.setItem('mw_active', '1');
+  await initDashboard();
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  localStorage.removeItem('mw_remember');
+  sessionStorage.removeItem('mw_active');
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-password').value = '';
+}
+
+async function checkSession() {
+  // Handle token_hash recovery links (PKCE-style, scanner-proof)
+  if (__recoveryTokenHash && __recoveryType === 'recovery') {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+    showView('verify-recovery');
+    return;
+  }
+  // Handle legacy hash-based recovery redirects
+  if (__isRecoveryRedirect) {
+    await sb.auth.getSession();
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+    showView('reset');
+    return;
+  }
+  // Normal flow: listen for auth state changes, then check session
+  sb.auth.onAuthStateChange(async function(event, session) {
+    if (event === 'PASSWORD_RECOVERY') {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+      showView('reset');
+    }
+  });
+  var result = await sb.auth.getSession();
+  if (result.data.session) {
+    var rememberUntil = Number(localStorage.getItem('mw_remember') || 0);
+    if (!sessionStorage.getItem('mw_active') && (!rememberUntil || Date.now() > rememberUntil)) {
+      localStorage.removeItem('mw_remember');
+      await sb.auth.signOut();
+      return;
+    }
+    sessionStorage.setItem('mw_active', '1');
+    await initDashboard();
+  }
+}
+
+document.getElementById('login-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
+document.getElementById('login-email').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('login-password').focus(); });
+document.getElementById('forgot-email').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleForgotPassword(); });
+document.getElementById('reset-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('reset-confirm').focus(); });
+document.getElementById('reset-confirm').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleResetPassword(); });
+
+function showView(view) {
+  document.querySelectorAll('.login-view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById('view-' + view).classList.add('active');
+  // Clear errors/success
+  document.querySelectorAll('.login-error, .login-success').forEach(function(el) { el.style.display = 'none'; });
+}
+
+async function handleVerifyRecovery() {
+  var btn = document.getElementById('verify-recovery-btn');
+  var errEl = document.getElementById('verify-recovery-error');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Verifying\u2026';
+  var verifyResult = await sb.auth.verifyOtp({ token_hash: __recoveryTokenHash, type: 'recovery' });
+  if (verifyResult.error) {
+    errEl.textContent = 'Reset link is invalid or has expired. Please request a new one.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Continue to Reset Password';
+  } else {
+    window.history.replaceState({}, '', window.location.pathname);
+    showView('reset');
+  }
+}
+
+async function handleForgotPassword() {
+  var email = document.getElementById('forgot-email').value.trim();
+  var btn = document.getElementById('forgot-btn');
+  var errEl = document.getElementById('forgot-error');
+  var successEl = document.getElementById('forgot-success');
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Sending\u2026';
+
+  var result = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/portal.html'
+  });
+
+  if (result.error) {
+    errEl.textContent = result.error.message;
+    errEl.style.display = 'block';
+  } else {
+    successEl.textContent = 'Check your email for a password reset link. It may take a minute to arrive.';
+    successEl.style.display = 'block';
+  }
+
+  btn.disabled = false; btn.textContent = 'Send Reset Link';
+}
+
+async function handleResetPassword() {
+  var password = document.getElementById('reset-password').value;
+  var confirm = document.getElementById('reset-confirm').value;
+  var btn = document.getElementById('reset-btn');
+  var errEl = document.getElementById('reset-error');
+  var successEl = document.getElementById('reset-success');
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  if (!password || !confirm) { errEl.textContent = 'Please fill in both fields.'; errEl.style.display = 'block'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Updating\u2026';
+
+  var result = await sb.auth.updateUser({ password: password });
+
+  if (result.error) {
+    errEl.textContent = result.error.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Update Password';
+  } else {
+    successEl.textContent = 'Password updated successfully! Redirecting\u2026';
+    successEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Update Password';
+    setTimeout(async function() {
+      await initDashboard();
+    }, 1500);
+  }
+}
+
+async function initDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  var userResult = await sb.auth.getUser();
+  var user = userResult.data.user;
+  var clientResult = await sb.from('mw_clients').select('*').eq('auth_user_id', user.id).limit(1);
+  var clients = clientResult.data;
+  if (!clients || clients.length === 0) { document.getElementById('client-name').textContent = 'No client profile found'; return; }
+  currentClient = clients[0];
+  dataClientId = currentClient.team_client_id || currentClient.id;
+  document.getElementById('client-name').textContent = currentClient.company_name;
+  await loadProducts();
+  await Promise.all([loadStats(), loadViolations(), loadRuns()]);
+}
+
+async function loadProducts() {
+  var result = await sb.from('mw_products').select('*').eq('client_id', dataClientId).eq('is_active', true).order('retailer').order('product_name');
+  allProducts = result.data || [];
+  var priceResult = await sb.from('mw_latest_prices').select('*').eq('client_id', dataClientId);
+  allLatestPrices = {};
+  (priceResult.data || []).forEach(function(p) { if (!allLatestPrices[p.product_id]) allLatestPrices[p.product_id] = []; allLatestPrices[p.product_id].push(p); });
+
+  // Fetch recent price history to compute previous prices per product
+  var histResult = await sb.from('mw_price_history').select('product_id, zip_code, price, collected_at').eq('client_id', dataClientId).eq('status', 'success').order('collected_at', { ascending: false }).limit(2000);
+  var prevPrices = {};
+  var hist = (histResult.data || []).filter(function(h) { return h.price !== null && h.price !== undefined; });
+  // Group by product_id and find the two most recent distinct dates
+  var byProduct = {};
+  hist.forEach(function(h) {
+    if (!byProduct[h.product_id]) byProduct[h.product_id] = [];
+    byProduct[h.product_id].push(h);
+  });
+  Object.keys(byProduct).forEach(function(pid) {
+    var entries = byProduct[pid];
+    // Extract date portion - handle both ISO 'T' separator and space separator
+    var getDate = function(ca) { return ca ? ca.substring(0, 10) : ''; };
+    var dates = {}; entries.forEach(function(e) { dates[getDate(e.collected_at)] = true; });
+    var sortedDates = Object.keys(dates).sort().reverse();
+    if (sortedDates.length >= 2) {
+      var latestDate = sortedDates[0];
+      var prevDate = sortedDates[1];
+      var latestEntries = entries.filter(function(e) { return getDate(e.collected_at) === latestDate; });
+      var prevEntries = entries.filter(function(e) { return getDate(e.collected_at) === prevDate; });
+      var latestAvg = latestEntries.reduce(function(s, e) { return s + Number(e.price); }, 0) / latestEntries.length;
+      var prevAvg = prevEntries.reduce(function(s, e) { return s + Number(e.price); }, 0) / prevEntries.length;
+      prevPrices[pid] = { latest: latestAvg, previous: prevAvg };
+    }
+  });
+  window._prevPrices = prevPrices;
+
+  var seen = {}; var retailers = [];
+  allProducts.forEach(function(p) { if (!seen[p.retailer]) { seen[p.retailer] = true; retailers.push(p.retailer); } });
+  var fd = document.getElementById('retailer-filters');
+  fd.innerHTML = '<button class="filter-btn active" onclick="setRetailerFilter(\'all\')">All</button>' +
+    retailers.map(function(r) { return '<button class="filter-btn" onclick="setRetailerFilter(\'' + r + '\')">' + formatRetailer(r) + '</button>'; }).join('');
+  renderProducts();
+}
+
+function renderProducts() {
+  var search = document.getElementById('search-input').value.toLowerCase();
+  var body = document.getElementById('products-body');
+  var filtered = allProducts.filter(function(p) {
+    var dn = getProductDisplayName(p);
+    var ms = dn.toLowerCase().indexOf(search) !== -1 || p.category.toLowerCase().indexOf(search) !== -1 || p.product_id.toLowerCase().indexOf(search) !== -1 || (p.brand && p.brand.toLowerCase().indexOf(search) !== -1);
+    var mr = activeRetailerFilter === 'all' || p.retailer === activeRetailerFilter;
+    var mv = !violationFilterActive || violationProductIds.has(p.id);
+    return ms && mr && mv;
+  });
+  var dir = currentSort.dir === 'asc' ? 1 : -1;
+  filtered.sort(function(a, b) {
+    if (currentSort.field === 'product') return dir * getProductDisplayName(a).localeCompare(getProductDisplayName(b));
+    if (currentSort.field === 'retailer') return dir * formatRetailer(a.retailer).localeCompare(formatRetailer(b.retailer));
+    if (currentSort.field === 'brand') { var ba = (a.brand || '').toLowerCase(), bb = (b.brand || '').toLowerCase(); if (!ba && !bb) return 0; if (!ba) return 1; if (!bb) return -1; return dir * ba.localeCompare(bb); }
+    if (currentSort.field === 'rating') { var ra = a.rating ? Number(a.rating) : null, rb = b.rating ? Number(b.rating) : null; if (ra === null && rb === null) return 0; if (ra === null) return 1; if (rb === null) return -1; return dir * (ra - rb); }
+    if (currentSort.field === 'price') { var pa = getLatestPriceNum(a), pb = getLatestPriceNum(b); if (pa === null && pb === null) return 0; if (pa === null) return 1; if (pb === null) return -1; return dir * (pa - pb); }
+    if (currentSort.field === 'map') { var ma = a.map_price ? Number(a.map_price) : null, mb = b.map_price ? Number(b.map_price) : null; if (ma === null && mb === null) return 0; if (ma === null) return 1; if (mb === null) return -1; return dir * (ma - mb); }
+    return 0;
+  });
+  if (filtered.length === 0) { body.innerHTML = '<div class="empty-state"><div class="icon">' + (violationFilterActive ? '&#10003;' : '&#8981;') + '</div><p>' + (violationFilterActive ? 'No MAP violations' + (activeRetailerFilter !== 'all' ? ' for ' + formatRetailer(activeRetailerFilter) : '') : 'No products found') + '</p></div>'; return; }
+  body.innerHTML = filtered.map(function(p) {
+    var pr = allLatestPrices[p.id] || []; var lp = pr.length > 0 ? pr[0] : null;
+    var ps = lp && lp.price ? '$' + Number(lp.price).toFixed(2) : '\u2014';
+    var ms = p.map_price ? '$' + Number(p.map_price).toFixed(2) : '\u2014';
+    var dn = getProductDisplayName(p);
+    var pc = ''; if (lp && lp.price && p.map_price) pc = Number(lp.price) < Number(p.map_price) ? 'price-up' : '';
+    var priceArrow = '';
+    var pd = window._prevPrices && window._prevPrices[p.id];
+    if (pd) {
+      var diff = pd.latest - pd.previous;
+      if (diff > 0.005) priceArrow = ' <span style="font-size:11px;color:var(--green);">&#9650; +$' + diff.toFixed(2) + '</span>';
+      else if (diff < -0.005) priceArrow = ' <span style="font-size:11px;color:var(--red);">&#9660; -$' + Math.abs(diff).toFixed(2) + '</span>';
+    }
+    var ratingArrow = '';
+    if (p.rating !== null && p.rating !== undefined && p.previous_rating !== null && p.previous_rating !== undefined) {
+      var rDiff = Number(p.rating) - Number(p.previous_rating);
+      if (rDiff > 0.005) ratingArrow = ' <span style="font-size:11px;color:var(--green);">&#9650;</span>';
+      else if (rDiff < -0.005) ratingArrow = ' <span style="font-size:11px;color:var(--red);">&#9660;</span>';
+    }
+    return '<div class="table-row" id="row-' + p.id + '" onclick="toggleExpand(\'' + p.id + '\')">' +
+      '<div><div class="prod-name">' + esc(dn) + '</div><div class="prod-cat">' + esc(p.category) + ' \u00b7 SKU: ' + esc(p.product_id) + '</div></div>' +
+      '<div><span class="retailer-badge badge-' + p.retailer + '">' + formatRetailer(p.retailer) + '</span></div>' +
+      '<div style="font-size:13px;color:var(--text-dim);">' + esc(p.brand || '\u2014') + '</div>' +
+      '<div style="font-family:var(--mono);font-size:12px;color:var(--text-dim);">' + esc(p.upc || '\u2014') + '</div>' +
+      '<div style="font-family:var(--mono);font-size:12px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;" title="' + esc(p.model_number || '') + '">' + esc(p.model_number || '\u2014') + '</div>' +
+      '<div style="font-family:var(--mono);font-size:13px;color:var(--text-dim);">' + (p.rating ? Number(p.rating).toFixed(1) + ' \u2605' : '\u2014') + ratingArrow + '</div>' +
+      '<div class="price-cell ' + pc + '">' + ps + priceArrow + '</div><div class="price-cell">' + ms + (violationProductIds.has(p.id) && p.map_price ? '<span class="map-violation-icon" title="MAP Violation"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>' : '') + '</div>' +
+      '<div class="expand-arrow">\u25be</div></div>' +
+      '<div class="chart-row" id="chart-' + p.id + '"><div class="chart-header"><span class="chart-title">Price History \u2014 ' + esc(dn) + '</span></div><div class="chart-canvas-wrap"><canvas id="canvas-' + p.id + '"></canvas></div></div>';
+  }).join('');
+}
+
+function setSort(field) {
+  if (currentSort.field === field) { currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc'; }
+  else { currentSort.field = field; currentSort.dir = (field === 'product' || field === 'retailer' || field === 'brand') ? 'asc' : 'desc'; }
+  document.querySelectorAll('.table-header .sortable').forEach(function(el) { el.classList.remove('active'); el.querySelector('.sort-arrow').innerHTML = '&#9650;'; });
+  var a = document.getElementById('sort-' + field); a.classList.add('active');
+  a.querySelector('.sort-arrow').innerHTML = currentSort.dir === 'asc' ? '&#9650;' : '&#9660;';
+  renderProducts();
+}
+
+async function exportToExcel() {
+  var search = document.getElementById('search-input').value.toLowerCase();
+  var filtered = allProducts.filter(function(p) {
+    var dn = getProductDisplayName(p);
+    var ms = dn.toLowerCase().indexOf(search) !== -1 || p.category.toLowerCase().indexOf(search) !== -1 || p.product_id.toLowerCase().indexOf(search) !== -1 || (p.brand && p.brand.toLowerCase().indexOf(search) !== -1);
+    var mr = activeRetailerFilter === 'all' || p.retailer === activeRetailerFilter;
+    var mv = !violationFilterActive || violationProductIds.has(p.id);
+    return ms && mr && mv;
+  });
+  var productIds = filtered.map(function(p) { return p.id; });
+  var historyResult = await sb.from('mw_price_history').select('product_id, zip_code, price, collected_at').eq('client_id', dataClientId).eq('status', 'success').not('price', 'is', null).in('product_id', productIds).order('collected_at', { ascending: true }).limit(5000);
+  var history = historyResult.data || [];
+  var productMap = {}; filtered.forEach(function(p) { productMap[p.id] = p; });
+  var rows = history.map(function(h) {
+    var p = productMap[h.product_id];
+    if (!p) return null;
+    return { 'Product Name': getProductDisplayName(p), 'SKU': p.product_id, 'Brand': p.brand || '', 'UPC': p.upc || '', 'Model Number': p.model_number || '', 'Rating': p.rating ? Number(p.rating) : '', 'Category': p.category, 'Retailer': formatRetailer(p.retailer), 'Zip Code': h.zip_code, 'Price': Number(h.price), 'MAP Price': p.map_price ? Number(p.map_price) : '', 'Country of Origin': p.country_of_origin || '', 'Date': h.collected_at.split('T')[0] };
+  }).filter(function(r) { return r !== null; });
+  if (rows.length === 0) { alert('No price history to export.'); return; }
+  var ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = Object.keys(rows[0]).map(function(k) { var mx = k.length; rows.forEach(function(r) { var l = String(r[k]).length; if (l > mx) mx = l; }); return { wch: mx + 2 }; });
+  var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Price History');
+  var ds = new Date().toISOString().split('T')[0]; var cn = currentClient.company_name.replace(/[^a-zA-Z0-9]/g, '_');
+  XLSX.writeFile(wb, cn + '_Price_History_' + ds + '.xlsx');
+}
+
+async function toggleExpand(productId) {
+  var row = document.getElementById('row-' + productId);
+  var cd = document.getElementById('chart-' + productId);
+  if (cd.classList.contains('open')) { cd.classList.remove('open'); row.classList.remove('expanded'); if (charts[productId]) { charts[productId].destroy(); delete charts[productId]; } return; }
+  document.querySelectorAll('.chart-row.open').forEach(function(el) { el.classList.remove('open'); var pi = el.id.replace('chart-', ''); var pr = document.getElementById('row-' + pi); if (pr) pr.classList.remove('expanded'); if (charts[pi]) { charts[pi].destroy(); delete charts[pi]; } });
+  row.classList.add('expanded'); cd.classList.add('open');
+  var result = await sb.from('mw_price_history').select('zip_code, price, collected_at').eq('product_id', productId).eq('status', 'success').not('price', 'is', null).order('collected_at', { ascending: true }).limit(500);
+  var history = result.data;
+  if (!history || history.length === 0) { cd.querySelector('.chart-canvas-wrap').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">No price history yet</div>'; return; }
+  var byZip = {}; history.forEach(function(h) { if (!byZip[h.zip_code]) byZip[h.zip_code] = []; byZip[h.zip_code].push({ date: h.collected_at.split('T')[0], price: Number(h.price) }); });
+  var ds = {}; history.forEach(function(h) { ds[h.collected_at.split('T')[0]] = true; }); var allDates = Object.keys(ds).sort();
+  var colors = ['#00C805', '#7C3AED', '#60a5fa', '#fbbf24', '#f472b6', '#34d399'];
+  var datasets = Object.keys(byZip).map(function(zip, i) { var pm = {}; byZip[zip].forEach(function(p) { pm[p.date] = p.price; }); return { label: 'ZIP ' + zip, data: allDates.map(function(d) { return pm[d] !== undefined ? pm[d] : null; }), borderColor: colors[i % colors.length], backgroundColor: colors[i % colors.length] + '18', fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2, spanGaps: true }; });
+  var canvas = document.getElementById('canvas-' + productId);
+  charts[productId] = new Chart(canvas, { type: 'line', data: { labels: allDates, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8b83a8', font: { family: "'JetBrains Mono', monospace", size: 11 } } }, tooltip: { backgroundColor: 'rgba(15,13,30,.95)', borderColor: 'rgba(0,200,5,.2)', borderWidth: 1, titleFont: { family: "'JetBrains Mono', monospace", size: 11 }, bodyFont: { family: "'JetBrains Mono', monospace", size: 13 }, callbacks: { label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(2); } } } }, scales: { x: { ticks: { color: '#5a5278', font: { family: "'JetBrains Mono', monospace", size: 10 } }, grid: { color: 'rgba(124,58,237,.06)' } }, y: { ticks: { color: '#5a5278', font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: function(v) { return '$' + v.toFixed(2); } }, grid: { color: 'rgba(124,58,237,.06)' } } } } });
+}
+
+async function loadStats() {
+  document.getElementById('stat-products').textContent = allProducts.length;
+  var seen = {}; allProducts.forEach(function(p) { seen[p.retailer] = true; });
+  document.getElementById('stat-retailers').textContent = Object.keys(seen).length;
+  var crR = await sb.from('mw_client_retailers').select('id').eq('client_id', dataClientId);
+  var zc = 0;
+  if (crR.data) { var ids = crR.data.map(function(r) { return r.id; }); if (ids.length > 0) { var zR = await sb.from('mw_client_zip_codes').select('zip_code').in('client_retailer_id', ids); var uniqueZips = new Set((zR.data || []).map(function(z) { return z.zip_code; })); zc = uniqueZips.size; } }
+  document.getElementById('stat-zips').textContent = zc;
+  var vR = await sb.from('mw_map_violations').select('product_id, status').eq('client_id', dataClientId).eq('status', 'open');
+  var vCount = (vR.data || []).length;
+  violationProductIds = new Set((vR.data || []).map(function(v) { return v.product_id; }));
+  document.getElementById('stat-violations').textContent = vCount;
+}
+
+async function loadViolations() {
+  var result = await sb.from('mw_map_violations').select('*, mw_products(product_name, retailer)').eq('client_id', dataClientId).order('detected_at', { ascending: false }).limit(100);
+  var v = result.data; var body = document.getElementById('violations-body');
+  if (!v || v.length === 0) { body.innerHTML = '<div class="empty-state"><div class="icon">&#10003;</div><p>No MAP violations detected</p></div>'; return; }
+  body.innerHTML = v.map(function(x) {
+    var pn = (x.mw_products && x.mw_products.product_name) ? x.mw_products.product_name : '\u2014';
+    var rt = (x.mw_products && x.mw_products.retailer) ? x.mw_products.retailer : '';
+    return '<div class="viol-row"><div><div class="prod-name">' + esc(pn) + '</div><div class="prod-cat">' + formatRetailer(rt) + ' \u00b7 ' + new Date(x.detected_at).toLocaleDateString() + '</div></div>' +
+      '<div style="font-family:var(--mono);font-size:13px;">' + esc(x.zip_code) + '</div>' +
+      '<div class="price-cell">$' + Number(x.map_price).toFixed(2) + '</div>' +
+      '<div class="price-cell price-up">$' + Number(x.actual_price).toFixed(2) + '</div>' +
+      '<div class="price-cell price-up">-$' + Number(x.violation_amount).toFixed(2) + '</div>' +
+      '<div><span class="status-badge status-' + x.status + '">' + x.status + '</span></div></div>';
+  }).join('');
+}
+
+async function loadRuns() {
+  var result = await sb.from('mw_run_log').select('*').eq('client_id', dataClientId).order('started_at', { ascending: false }).limit(50);
+  var runs = result.data; var body = document.getElementById('runs-body');
+  if (!runs || runs.length === 0) { body.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>No runs recorded yet</p></div>'; return; }
+  body.innerHTML = runs.map(function(r) {
+    var ec = r.error_count > 0 ? 'var(--red)' : 'var(--text-dim)';
+    return '<div class="run-row"><div style="font-family:var(--mono);font-size:12px;">' + esc(r.run_id) + '</div>' +
+      '<div><span class="retailer-badge badge-' + r.retailer + '">' + formatRetailer(r.retailer) + '</span></div>' +
+      '<div style="font-family:var(--mono);">' + r.total_checks + '</div>' +
+      '<div style="font-family:var(--mono);color:var(--green);">' + r.success_count + '</div>' +
+      '<div style="font-family:var(--mono);color:' + ec + ';">' + r.error_count + '</div>' +
+      '<div><span class="status-badge status-' + r.status + '">' + r.status + '</span></div></div>';
+  }).join('');
+}
+
+function toggleViolationFilter() {
+  violationFilterActive = !violationFilterActive;
+  var card = document.getElementById('stat-violations-card');
+  card.classList.toggle('active-filter', violationFilterActive);
+  updateProductsCardState();
+  renderActiveFilters();
+  renderProducts();
+}
+
+function clearAllFilters() {
+  violationFilterActive = false;
+  activeRetailerFilter = 'all';
+  document.getElementById('search-input').value = '';
+  document.getElementById('stat-violations-card').classList.remove('active-filter');
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.toggle('active', b.textContent === 'All'); });
+  updateViolationCount();
+  updateProductsCardState();
+  renderActiveFilters();
+  renderProducts();
+}
+
+function updateProductsCardState() {
+  var hasAnyFilter = violationFilterActive || activeRetailerFilter !== 'all' || document.getElementById('search-input').value.trim() !== '';
+  document.getElementById('stat-products-card').classList.toggle('active-green', hasAnyFilter);
+}
+
+function renderActiveFilters() {
+  var bar = document.getElementById('active-filters-bar');
+  var tags = [];
+  if (violationFilterActive) tags.push('<span class="filter-tag">MAP Violations <span class="remove" onclick="toggleViolationFilter()">&times;</span></span>');
+  if (activeRetailerFilter !== 'all') tags.push('<span class="filter-tag">Retailer: ' + formatRetailer(activeRetailerFilter) + ' <span class="remove" onclick="setRetailerFilter(\'all\')">&times;</span></span>');
+  bar.innerHTML = tags.length > 0 ? tags.join('') : '';
+}
+
+function setRetailerFilter(r) {
+  activeRetailerFilter = r;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.toggle('active', (r === 'all' && b.textContent === 'All') || b.textContent === formatRetailer(r)); });
+  updateViolationCount();
+  updateProductsCardState();
+  renderActiveFilters();
+  renderProducts();
+}
+
+function updateViolationCount() {
+  var count = 0;
+  allProducts.forEach(function(p) {
+    if (violationProductIds.has(p.id)) {
+      if (activeRetailerFilter === 'all' || p.retailer === activeRetailerFilter) count++;
+    }
+  });
+  document.getElementById('stat-violations').textContent = count;
+  var sub = document.querySelector('#stat-violations-card .stat-sub');
+  if (sub) sub.textContent = count === 0 ? 'none' : 'open';
+}
+
+function filterProducts() { updateProductsCardState(); renderProducts(); }
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'tab-' + tab); });
+}
+
+checkSession();
+</script>
+</body>
+</html>
